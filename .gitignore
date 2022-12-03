@@ -35,3 +35,8 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ziglang build output #
+########################
+zig-cache/
+zig-out/
