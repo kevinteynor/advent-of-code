@@ -26,7 +26,7 @@ fn getMaxCalories() !i32 {
     // return final max
 
     // todo: don't use hardcoded filepath
-    var file = try std.fs.openFileAbsolute("C:/dev/advent-of-code/2022-resources/day_01_testing.txt", .{});
+    var file = try std.fs.openFileAbsolute("C:/dev/advent-of-code/2022-resources/day_01.txt", .{});
     defer file.close();
 
     var buffered = std.io.bufferedReader(file.reader());
