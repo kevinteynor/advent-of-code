@@ -2,6 +2,7 @@ const std = @import("std");
 
 const common = @import("common.zig");
 const day_01 = @import("day_01.zig");
+const day_02 = @import("day_02.zig");
 
 pub fn main() !void {
     try common.printLn("Advent of Code 2022 - Zig");
@@ -10,6 +11,7 @@ pub fn main() !void {
 
     switch (day) {
         1 => try day_01.run(),
+        2 => try day_02.run(),
         else => {},
     }
 }
