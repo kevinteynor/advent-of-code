@@ -7,30 +7,57 @@ const day_02 = @import("day_02.zig");
 pub fn main() !void {
     try common.printLn("Advent of Code 2022 - Zig");
 
-    var day = getDay() catch 0;
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
-    switch (day) {
-        1 => try day_01.run(),
-        2 => try day_02.run(),
+    var input = try parseInput(allocator);
+    defer input.deinit();
+
+    std.debug.print("cwd: {s}\n", .{try std.fs.cwd().realpathAlloc(allocator, ".")});
+
+    switch (input.day) {
+        1 => try day_01.run(input.inputFile.?),
+        2 => try day_02.run(input.inputFile.?),
         else => {},
     }
 }
 
-fn getDay() !i32 {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        const leaked = gpa.deinit();
-        _ = leaked;
+const Inputs = struct {
+    const Self = @This();
+    day: i32,
+    inputFile: ?std.fs.File,
+
+    fn init(day: i32, inputFilePath: ?[]const u8) !Self {
+        var self = Self{
+            .day = day,
+            .inputFile = null,
+        };
+
+        if (inputFilePath) |ifp| {
+            self.inputFile = try std.fs.cwd().openFile(ifp, .{});
+        }
+
+        return self;
     }
 
+    fn deinit(self: *Self) void {
+        if (self.inputFile != null) {
+            self.inputFile.?.close();
+            self.inputFile = null;
+        }
+    }
+};
+
+fn parseInput(allocator: std.mem.Allocator) !Inputs {
     var args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
     if (args.len < 2) {
-        return 0;
+        return error.InvalidArgs;
     }
 
-    const day = try std.fmt.parseInt(i32, args[1], 10);
-    return day;
+    return Inputs.init(
+        try std.fmt.parseInt(i32, args[1], 10),
+        if (args.len > 2) args[2] else null);
 }

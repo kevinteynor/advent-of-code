@@ -10,26 +10,23 @@ const common = @import("common.zig");
 //  carrying the most calories
 
 
-pub fn run() !void {
+pub fn run(input: std.fs.File) !void {
     try common.printLn("Day 1: Calorie Counting");
     
-    const max = try getMaxCalories();
+    const max = try getMaxCalories(input);
     try common.printLnFmt("max calories: {}", .{max});
 
-    const max3 = try getTopThreeCalories();
+    const max3 = try getTopThreeCalories(input);
     try common.printLnFmt("sum of top three calories: {}", .{max3});
 }
 
-fn getMaxCalories() !i32 {
+fn getMaxCalories(input: std.fs.File) !i32 {
     // sum line counts until empty line
     // keep max of previous and current total
     // return final max
 
-    // todo: don't use hardcoded filepath
-    var file = try std.fs.openFileAbsolute("C:/dev/advent-of-code/2022-resources/day_01.txt", .{});
-    defer file.close();
-
-    var buffered = std.io.bufferedReader(file.reader());
+    try input.seekTo(0);
+    var buffered = std.io.bufferedReader(input.reader());
     var reader = buffered.reader();
     var buf: [1024]u8 = undefined;
     var current: i32 = 0;
@@ -52,16 +49,13 @@ fn getMaxCalories() !i32 {
     return max;
 }
 
-fn getTopThreeCalories() !i32 {
+fn getTopThreeCalories(input: std.fs.File) !i32 {
     // sum line counts until empty line
     // keep max of previous and current total
     // return final max
 
-    // todo: don't use hardcoded filepath
-    var file = try std.fs.openFileAbsolute("C:/dev/advent-of-code/2022-resources/day_01.txt", .{});
-    defer file.close();
-
-    var buffered = std.io.bufferedReader(file.reader());
+    try input.seekTo(0);
+    var buffered = std.io.bufferedReader(input.reader());
     var reader = buffered.reader();
     var buf: [1024]u8 = undefined;
     var current: i32 = 0;

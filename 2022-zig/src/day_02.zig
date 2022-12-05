@@ -15,21 +15,18 @@ const common = @import("common.zig");
 //      - draw:     +3
 //      - win:      +6
 
-pub fn run() !void {
+pub fn run(input: std.fs.File) !void {
     try common.printLn("Day 2: Calorie Counting");
-    try part1();
-    try part2();
+    try part1(input);
+    try part2(input);
 }
 
-fn part1() !void {
+fn part1(input: std.fs.File) !void {
     // read input file
     // loop over each input line, parse opponent + player selections, calculate + aggregate score
 
-    // todo: don't use hardcoded filepath
-    var file = try std.fs.openFileAbsolute("C:/dev/advent-of-code/2022-resources/day_02.txt", .{});
-    defer file.close();
-
-    var buffered = std.io.bufferedReader(file.reader());
+    try input.seekTo(0);
+    var buffered = std.io.bufferedReader(input.reader());
     var reader = buffered.reader();
     var buf: [1024]u8 = undefined;
     var total: u32 = 0;
@@ -48,15 +45,12 @@ fn part1() !void {
     try common.printLnFmt("part 1: total player score: {}", .{total});
 }
 
-fn part2() !void {
+fn part2(input: std.fs.File) !void {
     // read input file
     // loop over each input line, parse opponent + player selections, calculate + aggregate score
-
-    // todo: don't use hardcoded filepath
-    var file = try std.fs.openFileAbsolute("C:/dev/advent-of-code/2022-resources/day_02.txt", .{});
-    defer file.close();
-
-    var buffered = std.io.bufferedReader(file.reader());
+    
+    try input.seekTo(0);
+    var buffered = std.io.bufferedReader(input.reader());
     var reader = buffered.reader();
     var buf: [1024]u8 = undefined;
     var total: u32 = 0;
