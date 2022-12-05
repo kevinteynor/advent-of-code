@@ -29,3 +29,32 @@ pub fn printLn(comptime msg: []const u8) !void {
 pub fn printLnFmt(comptime fmt: []const u8, args: anytype) !void {
     try printFmt(fmt ++ "\n", args);
 }
+
+pub fn readLines(reader: anytype, buf: []u8) !?[]u8 {
+    var index: usize = 0;
+    while (true) {
+        if (index >= buf.len) return error.StreamTooLong;
+
+        const byte = reader.readByte() catch |err| switch (err) {
+            error.EndOfStream => {
+                if (index == 0) {
+                    return null;
+                } else {
+                    return buf[0..index];
+                }
+            },
+            else => |e| return e,
+        };
+
+        buf[index] = byte;
+        index += 1;
+
+        // not great, order of these matter so we can detect \r\n before just \n
+        const delimiters = [_][]const u8{"\r\n", "\n"};
+        for (delimiters) |d| {
+            if (index >= d.len and std.mem.eql(u8, buf[index-d.len..index], d)) {
+                return buf[0..index-d.len];
+            }
+        }
+    }
+}

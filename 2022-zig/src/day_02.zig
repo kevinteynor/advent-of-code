@@ -30,11 +30,8 @@ fn part1(input: std.fs.File) !void {
     var reader = buffered.reader();
     var buf: [1024]u8 = undefined;
     var total: u32 = 0;
-    while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        // account for possible '\r\n' line endings
-        var trimmed = if (line.len > 0 and line[line.len-1] == '\r') line[0..line.len-1] else line;
-
-        var it = std.mem.tokenize(u8, trimmed, " ");
+    while (try common.readLines(reader, &buf)) |line| {
+        var it = std.mem.tokenize(u8, line, " ");
 
         const opponent = try parseSelection(it.next().?[0]);
         const player = try parseSelection(it.next().?[0]);
@@ -54,11 +51,8 @@ fn part2(input: std.fs.File) !void {
     var reader = buffered.reader();
     var buf: [1024]u8 = undefined;
     var total: u32 = 0;
-    while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        // account for possible '\r\n' line endings
-        var trimmed = if (line.len > 0 and line[line.len-1] == '\r') line[0..line.len-1] else line;
-
-        var it = std.mem.tokenize(u8, trimmed, " ");
+    while (try common.readLines(reader, &buf)) |line| {
+        var it = std.mem.tokenize(u8, line, " ");
 
         const opponent = try parseSelection(it.next().?[0]);
         const result = try parseGameResult(it.next().?[0]);

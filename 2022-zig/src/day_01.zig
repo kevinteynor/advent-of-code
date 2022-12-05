@@ -31,11 +31,8 @@ fn getMaxCalories(input: std.fs.File) !i32 {
     var buf: [1024]u8 = undefined;
     var current: i32 = 0;
     var max: i32 = 0;
-    while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        // account for possible '\r\n' line endings
-        var trimmed = if (line.len > 0 and line[line.len-1] == '\r') line[0..line.len-1] else line;
-
-        const val = std.fmt.parseInt(i32, trimmed, 10) catch {
+    while (try common.readLines(reader, &buf)) |line| {
+        const val = std.fmt.parseInt(i32, line, 10) catch {
             // reached end of a set, compare current with max
             max = std.math.max(current, max);
             current = 0;
@@ -60,11 +57,8 @@ fn getTopThreeCalories(input: std.fs.File) !i32 {
     var buf: [1024]u8 = undefined;
     var current: i32 = 0;
     var max = [3]i32{0,0,0};
-    while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        // account for possible '\r\n' line endings
-        var trimmed = if (line.len > 0 and line[line.len-1] == '\r') line[0..line.len-1] else line;
-
-        const val = std.fmt.parseInt(i32, trimmed, 10) catch {
+    while (try common.readLines(reader, &buf)) |line| {
+        const val = std.fmt.parseInt(i32, line, 10) catch {
             // reached end of a set, compare (lowest) top 3 with current
             max[0] = std.math.max(current, max[0]);
             std.sort.sort(i32, &max, {}, std.sort.asc(i32));
