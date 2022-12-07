@@ -58,3 +58,50 @@ pub fn readLines(reader: anytype, buf: []u8) !?[]u8 {
         }
     }
 }
+
+pub fn readNLines(comptime n: usize, reader: anytype, buf: []u8) !?[n][]u8 {
+    
+    // read n lines and return an array of slices into buf for each line
+
+    var lines: [n][]u8 = undefined;
+    
+    var count: usize = 0;
+    var index: usize = 0;
+    var lineStart: usize = 0;
+    while (count < n) {
+        if (index >= buf.len) return error.StreamTooLong;
+
+        const byte = reader.readByte() catch |err| switch(err) {
+            error.EndOfStream => {
+                if (index == 0) {
+                    return null;
+                } else if (count < n - 1) {
+                    // todo: possibly return array of optional slices in this case
+                    return error.TooFewLines;
+                } else {
+                    lines[count] = buf[lineStart..index];
+                    break;
+                }
+            },
+            else => |e| return e,
+        };
+
+        buf[index] = byte;
+        index += 1;
+
+        // check for delimeters
+        const delimiters = [_][]const u8{"\r\n", "\n"};
+        for (delimiters) |d| {
+            if (index >= d.len and std.mem.eql(u8, buf[index-d.len..index], d)) {
+                // found end of a line
+                lines[count] = buf[lineStart..index-d.len];
+                index += d.len;
+                count += 1;
+                lineStart = index;
+                break;
+            }
+        }
+    }
+
+    return lines;
+}
