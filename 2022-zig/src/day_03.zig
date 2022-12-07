@@ -8,6 +8,9 @@ pub fn run(input: std.fs.File) !void {
 
     const prioritySum = try getPrioritySum(input);
     try common.printLnFmt("priority sum: {}", .{prioritySum});
+
+    const groupPrioritySum = try getGroupPrioritySum(input);
+    try common.printLnFmt("group priority sum: {}", .{groupPrioritySum});
 }
 
 pub fn getPrioritySum(input: std.fs.File) !i32 {
@@ -28,10 +31,49 @@ pub fn getPrioritySum(input: std.fs.File) !i32 {
                 if (ca == cb) {
                     // found the duplicate
                     const prio = try itemPriority(ca);
-                    try common.printLnFmt("duplicate: {c} ({})\n", .{ca, prio});
                     total += prio;
                     continue :outer;
                 }
+            }
+        }
+    }
+
+    return total;
+}
+
+pub fn getGroupPrioritySum(input: std.fs.File) !i32 {
+
+    try input.seekTo(0);
+    var buffered = std.io.bufferedReader(input.reader());
+    var reader = buffered.reader();
+    var buf: [1024]u8 = undefined;
+    var total: i32 = 0;
+    const ascu8 = std.sort.asc(u8);
+    while (try common.readNLines(3, reader, &buf)) |lines| {
+
+        for (lines) |line| {
+            std.sort.sort(u8, line, {}, ascu8);
+        }
+
+        var _i0: usize = 0;
+        var _i1: usize = 0;
+        var _i2: usize = 0;
+
+        while (_i0 < lines[0].len and _i1 < lines[1].len and _i2 < lines[2].len) {
+            const c0 = lines[0][_i0];
+            const c1 = lines[1][_i1];
+            const c2 = lines[2][_i2];
+            if (c0 == c1 and c1 == c2) {
+                total += try itemPriority(c0);
+                break;     
+            }
+            
+            if (c0 < c1 or c0 < c2) {
+                _i0 += 1;
+            } else if (c1 < c2) {
+                _i1 += 1;
+            } else {
+                _i2 += 1;
             }
         }
     }
