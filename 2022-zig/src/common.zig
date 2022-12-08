@@ -1,4 +1,8 @@
 const std = @import("std");
+const expect = std.testing.expect;
+const expectEqualStrings = std.testing.expectEqualStrings;
+const expectError = std.testing.expectError;
+const builtin = @import("builtin");
 
 // todo: support non-comptime printing functions
 // https://stackoverflow.com/questions/66527365/how-to-concat-two-string-literals-at-compile-time-in-zig
@@ -30,78 +34,59 @@ pub fn printLnFmt(comptime fmt: []const u8, args: anytype) !void {
     try printFmt(fmt ++ "\n", args);
 }
 
-pub fn readLines(reader: anytype, buf: []u8) !?[]u8 {
-    var index: usize = 0;
-    while (true) {
-        if (index >= buf.len) return error.StreamTooLong;
-
-        const byte = reader.readByte() catch |err| switch (err) {
-            error.EndOfStream => {
-                if (index == 0) {
-                    return null;
-                } else {
-                    return buf[0..index];
-                }
-            },
-            else => |e| return e,
-        };
-
-        buf[index] = byte;
-        index += 1;
-
-        // not great, order of these matter so we can detect \r\n before just \n
-        const delimiters = [_][]const u8{"\r\n", "\n"};
-        for (delimiters) |d| {
-            if (index >= d.len and std.mem.eql(u8, buf[index-d.len..index], d)) {
-                return buf[0..index-d.len];
-            }
-        }
+pub fn readLine(reader: anytype, buffer: []u8) !?[]u8 {
+    var line = try reader.readUntilDelimiterOrEof(buffer, '\n') orelse return null;
+    if (builtin.os.tag == .windows and line.len > 0 and line[line.len - 1] == '\r') {
+        line = line[0..line.len - 1];
     }
+    return line;
 }
 
-pub fn readNLines(comptime n: usize, reader: anytype, buf: []u8) !?[n][]u8 {
-    
-    // read n lines and return an array of slices into buf for each line
-
-    var lines: [n][]u8 = undefined;
-    
+pub fn readNLines(comptime N: usize, reader: anytype, buffer: []u8) !?[N][]u8 {
+    var lines: [N][]u8 = undefined;
+    var offset: usize = 0;
     var count: usize = 0;
-    var index: usize = 0;
-    var lineStart: usize = 0;
-    while (count < n) {
-        if (index >= buf.len) return error.StreamTooLong;
-
-        const byte = reader.readByte() catch |err| switch(err) {
-            error.EndOfStream => {
-                if (index == 0) {
-                    return null;
-                } else if (count < n - 1) {
-                    // todo: possibly return array of optional slices in this case
-                    return error.TooFewLines;
-                } else {
-                    lines[count] = buf[lineStart..index];
-                    break;
-                }
-            },
-            else => |e| return e,
-        };
-
-        buf[index] = byte;
-        index += 1;
-
-        // check for delimeters
-        const delimiters = [_][]const u8{"\r\n", "\n"};
-        for (delimiters) |d| {
-            if (index >= d.len and std.mem.eql(u8, buf[index-d.len..index], d)) {
-                // found end of a line
-                lines[count] = buf[lineStart..index-d.len];
-                index += d.len;
-                count += 1;
-                lineStart = index;
-                break;
-            }
-        }
+    while (count < N) {
+        const line = try readLine(reader, buffer[offset..]) orelse return null;
+        lines[count] = line;
+        offset += line.len;
+        count += 1;
     }
-
     return lines;
+}
+
+test "read line" {
+    var src = std.io.fixedBufferStream("one\ntwo\nthree");
+    const reader = src.reader();
+    var buffer: [16]u8 = undefined;
+
+    var read = try readLine(reader, &buffer) orelse unreachable;
+    try expectEqualStrings("one", read);
+    read = try readLine(reader, &buffer) orelse unreachable;
+    try expectEqualStrings("two", read);
+    read = try readLine(reader, &buffer) orelse unreachable;
+    try expectEqualStrings("three", read);
+}
+
+test "read N lines" {
+    var src = std.io.fixedBufferStream(
+        \\one
+        \\two
+        \\three
+        \\four
+        \\five
+    );
+    const reader = src.reader();
+    var buffer: [16]u8 = undefined;
+
+    const first = try readNLines(2, reader, &buffer) orelse unreachable;
+    try expectEqualStrings("one", first[0]);
+    try expectEqualStrings("two", first[1]);
+
+    const second = try readNLines(2, reader, &buffer) orelse unreachable;
+    try expectEqualStrings("three", second[0]);
+    try expectEqualStrings("four", second[1]);
+    
+    const third = try readNLines(2, reader, &buffer);
+    try expect(third == null);
 }

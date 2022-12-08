@@ -1,25 +1,27 @@
 const std = @import("std");
+const expectEqual = std.testing.expectEqual;
 const common = @import("common.zig");
 
 // https://adventofcode.com/2022/day/3
 
-pub fn run(input: std.fs.File) !void {    
+pub fn run(input: std.fs.File) !void {
     try common.printLn("Day 3: Rucksack Reorganization");
+    var buffered = std.io.bufferedReader(input.reader());
+    var reader = buffered.reader();
 
-    const prioritySum = try getPrioritySum(input);
+    const prioritySum = try getPrioritySum(reader);
     try common.printLnFmt("priority sum: {}", .{prioritySum});
 
-    const groupPrioritySum = try getGroupPrioritySum(input);
+    try input.seekTo(0);
+
+    const groupPrioritySum = try getGroupPrioritySum(reader);
     try common.printLnFmt("group priority sum: {}", .{groupPrioritySum});
 }
 
-pub fn getPrioritySum(input: std.fs.File) !i32 {
-    try input.seekTo(0);
-    var buffered = std.io.bufferedReader(input.reader());
-    var reader = buffered.reader();
+pub fn getPrioritySum(reader: anytype) !i32 {
     var buf: [1024]u8 = undefined;
     var total: i32 = 0;
-    outer: while (try common.readLines(reader, &buf)) |line| {
+    outer: while (try common.readLine(reader, &buf)) |line| {
         // split string in half
         const mid = line.len / 2;
         var a = line[0..mid];
@@ -41,16 +43,25 @@ pub fn getPrioritySum(input: std.fs.File) !i32 {
     return total;
 }
 
-pub fn getGroupPrioritySum(input: std.fs.File) !i32 {
+test "priority sum" {
+    var input = std.io.fixedBufferStream(
+        \\vJrwpWtwJgWrhcsFMMfFFhFp
+        \\jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
+        \\PmmdzqPrVvPwwTWBwg
+        \\wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
+        \\ttgJtRGJQctTZtZT
+        \\CrZsJsPPZsGzwwsLwLmpwMDw
+    );
+    var reader = input.reader();
+    const sum = try getPrioritySum(reader);
+    try expectEqual(@as(i32, 157), sum);
+}
 
-    try input.seekTo(0);
-    var buffered = std.io.bufferedReader(input.reader());
-    var reader = buffered.reader();
+pub fn getGroupPrioritySum(reader: anytype) !i32 {
     var buf: [1024]u8 = undefined;
     var total: i32 = 0;
     const ascu8 = std.sort.asc(u8);
     while (try common.readNLines(3, reader, &buf)) |lines| {
-
         for (lines) |line| {
             std.sort.sort(u8, line, {}, ascu8);
         }
@@ -65,9 +76,9 @@ pub fn getGroupPrioritySum(input: std.fs.File) !i32 {
             const c2 = lines[2][_i2];
             if (c0 == c1 and c1 == c2) {
                 total += try itemPriority(c0);
-                break;     
+                break;
             }
-            
+
             if (c0 < c1 or c0 < c2) {
                 _i0 += 1;
             } else if (c1 < c2) {
@@ -81,8 +92,22 @@ pub fn getGroupPrioritySum(input: std.fs.File) !i32 {
     return total;
 }
 
+test "group priority sum" {
+    var input = std.io.fixedBufferStream(
+        \\vJrwpWtwJgWrhcsFMMfFFhFp
+        \\jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
+        \\PmmdzqPrVvPwwTWBwg
+        \\wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
+        \\ttgJtRGJQctTZtZT
+        \\CrZsJsPPZsGzwwsLwLmpwMDw
+    );
+    var reader = input.reader();
+    const sum = try getGroupPrioritySum(reader);
+    try expectEqual(@as(i32, 70), sum);
+}
+
 pub fn itemPriority(item: u8) !i32 {
-    return switch(item) {
+    return switch (item) {
         'a'...'z' => item - 'a' + 1,
         'A'...'Z' => item - 'A' + 27,
         else => error.InvalidInput,
