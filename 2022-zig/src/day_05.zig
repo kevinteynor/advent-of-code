@@ -11,15 +11,17 @@ pub fn run(input: std.fs.File, allocator: Allocator) !void {
 
     // part 1
     var output: [16]u8 = undefined;
-    var tops = try getTopOfStacks(reader, &output, allocator);
-    try common.printLnFmt("Stack Tops: {s}", .{tops});
+    var tops = try getTopOfStacksCM9000(reader, &output, allocator);
+    try common.printLnFmt("Stack Tops (CM 9000): {s}", .{tops});
 
     try input.seekTo(0);
 
     // part 2
+    tops = try getTopOfStacksCM9001(reader, &output, allocator);
+    try common.printLnFmt("Stack Tops (CM 9001): {s}", .{tops});
 }
 
-fn getTopOfStacks(reader: anytype, buffer: []u8, allocator: Allocator) ![]u8 {
+fn getTopOfStacksCM9000(reader: anytype, buffer: []u8, allocator: Allocator) ![]u8 {
     var cargo = try parseInitialStacks(reader, allocator);
     defer cargo.deinit();
 
@@ -40,7 +42,7 @@ fn getTopOfStacks(reader: anytype, buffer: []u8, allocator: Allocator) ![]u8 {
     return buffer[0..cargo.stacks.len];
 }
 
-test "Get Top of Stacks" {
+test "Get Top of Stacks (CM 9000)" {
     var input = std.io.fixedBufferStream(
         \\    [D]    
         \\[N] [C]    
@@ -54,9 +56,54 @@ test "Get Top of Stacks" {
     );
     var reader = input.reader();
     var output: [3]u8 = undefined;
-    var result = try getTopOfStacks(reader, &output, std.testing.allocator);
+    var result = try getTopOfStacksCM9000(reader, &output, std.testing.allocator);
     try std.testing.expectEqualStrings("CMZ", result);
 }
+
+
+fn getTopOfStacksCM9001(reader: anytype, buffer: []u8, allocator: Allocator) ![]u8 {
+    var cargo = try parseInitialStacks(reader, allocator);
+    defer cargo.deinit();
+
+    var line_buffer: [32]u8 = undefined;
+    while (try common.readLine(reader, &line_buffer)) |line| {
+        var step = try parseStep(line);
+        var count = step.count;
+        while (count > 0) {
+            var i = cargo.pop(step.source);
+            try cargo.push(step.target, i);
+            count -= 1;
+        }
+
+        const target_len = cargo.stacks[step.target].items.len;
+        std.mem.reverse(u8, cargo.stacks[step.target].items[target_len-step.count..]);
+    }
+
+    for (cargo.stacks) |_, i| {
+        buffer[i] = cargo.back(@intCast(u8,i)).?;
+    }
+
+    return buffer[0..cargo.stacks.len];
+}
+
+test "Get Top of Stacks (CM 9001)" {
+    var input = std.io.fixedBufferStream(
+        \\    [D]    
+        \\[N] [C]    
+        \\[Z] [M] [P]
+        \\ 1   2   3 
+        \\
+        \\move 1 from 2 to 1
+        \\move 3 from 1 to 3
+        \\move 2 from 2 to 1
+        \\move 1 from 1 to 2
+    );
+    var reader = input.reader();
+    var output: [3]u8 = undefined;
+    var result = try getTopOfStacksCM9001(reader, &output, std.testing.allocator);
+    try std.testing.expectEqualStrings("MCD", result);
+}
+
 
 const Cargo = struct {
     const Self = @This();
