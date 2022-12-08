@@ -9,8 +9,14 @@ pub fn run(input: std.fs.File) !void {
     var reader = buffered.reader();
 
     // part 1
-    const count = try getFullyContainedAssignments(reader);
-    try common.printLnFmt("Fully contained assignments: {}", .{count});
+    const subsets = try getFullyContainedAssignments(reader);
+    try common.printLnFmt("Fully contained assignments: {}", .{subsets});
+
+    try input.seekTo(0);
+
+    // part 2
+    const overlaps = try getOverlappingAssignments(reader);
+    try common.printLnFmt("Overlapping assignments: {}", .{overlaps});
 }
 
 fn getFullyContainedAssignments(reader: anytype) !u32 {
@@ -40,6 +46,34 @@ test "Fully Contained Assignments" {
 
     const count = try getFullyContainedAssignments(reader);
     try expectEqual(@as(u32, 3), count);
+}
+
+fn getOverlappingAssignments(reader: anytype) !u32 {
+    var buf: [1024]u8 = undefined;
+    var count: u32 = 0;
+    while (try common.readLine(reader, &buf)) |line| {
+        const assignments = try parseAssignments(line);
+        if (assignmentOverlaps(assignments[0], assignments[1])) {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+test "Overlapping Assignments" {
+    var input = std.io.fixedBufferStream(
+        \\2-4,6-8
+        \\2-3,4-5
+        \\5-7,7-9
+        \\2-8,3-7
+        \\6-6,4-6
+        \\2-6,4-8
+    );
+    var reader = input.reader();
+
+    const count = try getOverlappingAssignments(reader);
+    try expectEqual(@as(u32, 4), count);
 }
 
 const Assignment = struct {
@@ -111,4 +145,46 @@ test "Assignment is Subset" {
     a = Assignment{ .min = 1, .max = 3 };
     b = Assignment{ .min = 1, .max = 3 };
     try expect(assignmentIsSubset(a, b));
+}
+
+fn assignmentOverlaps(a: Assignment, b: Assignment) bool {
+    if (assignmentIsSubset(a, b)) {
+        return true;
+    } else if (a.min <= b.min and a.max >= b.min) {
+        // |...456...|
+        // |.....67..|
+        return true;
+    } else if (b.min <= a.min and b.max >= a.min) {
+        // |.....67..|
+        // |...456...|
+        return true;
+    }
+
+    return false;
+}
+
+test "Assignments Overlap" {
+    var a = Assignment{ .min = 2, .max = 4, };
+    var b = Assignment{ .min = 6, .max = 8, };
+    try expect(!assignmentOverlaps(a, b));
+
+    // a contains b
+    a = Assignment{ .min = 2, .max = 8 };
+    b = Assignment{ .min = 3, .max = 7 };
+    try expect(assignmentOverlaps(a, b));
+
+    // a b overlap
+    a = Assignment{ .min = 3, .max = 5 };
+    b = Assignment{ .min = 4, .max = 6 };
+    try expect(assignmentOverlaps(a, b));
+
+    // a b intersect
+    a = Assignment{ .min = 7, .max = 20 };
+    b = Assignment{ .min = 20, .max = 60 };
+    try expect(assignmentOverlaps(a, b));
+
+    // a b intersect
+    a = Assignment{ .min = 3, .max = 20 };
+    b = Assignment{ .min = 2, .max = 30 };
+    try expect(assignmentOverlaps(a, b));
 }
