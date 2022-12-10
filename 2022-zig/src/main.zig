@@ -7,6 +7,7 @@ const day_03 = @import("day_03.zig");
 const day_04 = @import("day_04.zig");
 const day_05 = @import("day_05.zig");
 const day_06 = @import("day_06.zig");
+const day_07 = @import("day_07.zig");
 
 pub fn main() !void {
     try common.printLn("Advent of Code 2022 - Zig");
@@ -18,8 +19,6 @@ pub fn main() !void {
     var input = try parseInput(allocator);
     defer input.deinit();
 
-    std.debug.print("cwd: {s}\n", .{try std.fs.cwd().realpathAlloc(allocator, ".")});
-
     switch (input.day) {
         1 => try day_01.run(input.inputFile.?),
         2 => try day_02.run(input.inputFile.?),
@@ -27,6 +26,7 @@ pub fn main() !void {
         4 => try day_04.run(input.inputFile.?),
         5 => try day_05.run(input.inputFile.?, allocator),
         6 => try day_06.run(input.inputFile.?),
+        7 => try day_07.run(input.inputFile.?, allocator),
         else => {},
     }
 }
