@@ -23,9 +23,11 @@ pub fn run(input: std.fs.File, allocator: Allocator) !void {
     reader = buffered.reader();
 
     // part 2
+    const delSize = try deleteSize(reader, allocator);
+    try common.printLnFmt("min size to delete: {}", .{delSize});
 }
 
-fn sum(reader: anytype, allocator: Allocator) !usize {
+fn sum1(reader: anytype, allocator: Allocator) !usize {
     var root = try parseFileSystem(reader, allocator);
     defer root.deinit();
 
@@ -71,11 +73,66 @@ test "recursive sum" {
     current = current.getChildDir("b").?;
     try current.ensureFile("y.f", 200);
 
-    try root.printTree(0);
+    // try root.printTree(0);
 
     const sum = recursiveSum(&root, 300);
     try expectEqual(@as(usize, 500), sum);
 }
+
+fn deleteSize(reader: anytype, allocator: Allocator) !usize {
+    var root = try parseFileSystem(reader, allocator);
+    defer root.deinit();
+
+    const total_size = root.getSize();
+    const free_size = 70000000 - total_size;
+    const needed_size = 30000000 - free_size;   // how much space is need to be freed
+
+    // find smallest dir that is at least `needed_size` big
+    return recursiveMin(&root, needed_size).?;
+}
+
+fn recursiveMin(dir: *Directory, minThreshold: usize) ?usize {
+    var size = dir.getSize();
+    if (size < minThreshold) {
+        // current dir too small
+        return null;
+    }
+
+    var it = dir.children.iterator();
+    while (it.next()) |child| {
+        switch (child.value_ptr.*) {
+            .directory => |*subdir| {
+                const subsize = recursiveMin(subdir, minThreshold) orelse continue;
+                size = std.math.min(size, subsize);
+            },
+            else => {},
+        }
+    }
+
+    return size;
+}
+
+test "recursive min" {
+    var root = try Directory.init("/", null, std.testing.allocator);
+    defer root.deinit();
+
+    var current: *Directory = &root;
+    try current.ensureDir("a");
+    try current.ensureDir("b");
+
+    current = current.getChildDir("a").?;
+    try current.ensureFile("w.f", 100);
+    try current.ensureDir("c");
+    current = current.getChildDir("c").?;
+    try current.ensureFile("x.f", 300);
+    current = &root;
+    current = current.getChildDir("b").?;
+    try current.ensureFile("y.f", 401);
+
+    const min = recursiveMin(&root, 400).?;
+    try expectEqual(@as(usize, 400), min);
+}
+
 
 const Directory = struct {
     const Self = @This();
@@ -206,7 +263,7 @@ test "FileSystem Size" {
     current = current.getChildDir("f").?;
     try current.ensureFile("1.txt", 1024);
 
-    try root.printTree(0);
+    // try root.printTree(0);
 
     try expectEqual(@as(usize, 1024), root.getSize());
 }
@@ -282,5 +339,5 @@ test "Parse FileSystem" {
 
     try expectEqualStrings("/", result.name);
 
-    try result.printTree(0);
+    // try result.printTree(0);
 }
