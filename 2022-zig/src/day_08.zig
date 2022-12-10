@@ -17,6 +17,13 @@ pub fn run(input: std.fs.File, allocator: Allocator) !void {
 
     const numVisible = try getVisibleTreeCount(reader, allocator);
     try common.printLnFmt("Number of visible trees: {}", .{numVisible});
+
+    try input.seekTo(0);
+    buffered = std.io.bufferedReader(input.reader());
+    reader = buffered.reader();
+
+    const bestScore = try getBestScenicScore(reader, allocator);
+    try common.printLnFmt("Best scenic score: {}", .{bestScore});
 }
 
 fn getVisibleTreeCount(reader: anytype, allocator: Allocator) !usize {
@@ -24,6 +31,11 @@ fn getVisibleTreeCount(reader: anytype, allocator: Allocator) !usize {
     var grid = try parseTreeGrid(reader, allocator);
     try grid.calcNeighborHeights();
     return grid.numVisible();
+}
+
+fn getBestScenicScore(reader: anytype, allocator: Allocator) !usize {
+    var grid = try parseTreeGrid(reader, allocator);
+    return try grid.maxScenicScore();
 }
 
 const Grid = struct {
@@ -67,16 +79,9 @@ const Grid = struct {
                 };
             }
         }
-
-        try self.calcNeighborHeights();
     }
 
     fn calcNeighborHeights(self: *Self) !void {
-
-        // process grid individually for each direction
-        // calculate max height while iterating in each direction
-        // store max
-
         // left + right heights processed row-by-row
         var row: usize = 0;
         while (row < self.height) : (row += 1) {
@@ -126,6 +131,48 @@ const Grid = struct {
             }
         }
         return total;
+    }
+
+    fn maxScenicScore(self: Self) !usize {
+        var best: usize = 0;
+
+        // don't need to check outermost trees, they will all be 0
+        var y: usize = 1;
+        while (y < self.height - 1) : (y += 1) {
+            var x: usize = 1;
+            while (x < self.width - 1) : (x += 1) {
+                var cell = try self.at(x, y);
+                cell.left = 0;
+                cell.up = 0;
+                cell.right = 0;
+                cell.down = 0;
+                var i: isize = @intCast(isize, x) - 1;
+                while (i >= 0) : (i -= 1) {
+                    cell.left += 1;
+                    if ((try self.at(@intCast(usize, i), y)).height >= cell.height) break;
+                }
+                i = @intCast(isize, x) + 1;
+                while (i < self.width) : (i += 1) {
+                    cell.right += 1;
+                    if ((try self.at(@intCast(usize, i), y)).height >= cell.height) break;
+                }
+                i = @intCast(isize, y) - 1;
+                while (i >= 0) : (i -= 1) {
+                    cell.up += 1;
+                    if ((try self.at(x, @intCast(usize, i))).height >= cell.height) break;
+                }
+                i = @intCast(isize, y) + 1;
+                while (i < self.height) : (i += 1) {
+                    cell.down += 1;
+                    if ((try self.at(x, @intCast(usize, i))).height >= cell.height) break;
+                }
+
+                const score: usize = @intCast(usize, cell.left) * @intCast(usize, cell.up) * @intCast(usize, cell.right) * @intCast(usize, cell.down);
+                best = std.math.max(best, score);
+            }
+        }
+
+        return best;
     }
 
     fn at(self: Self, x: usize, y: usize) !*Cell {
@@ -215,10 +262,10 @@ const Grid = struct {
 const Cell = struct {
     const Self = @This();
     height: i8,
-    left: i8,
-    up: i8,
-    right: i8,
-    down: i8,
+    left: i8 = 0,
+    up: i8 = 0,
+    right: i8 = 0,
+    down: i8 = 0,
 
     fn isVisible(self: Self) bool {
         return self.height > self.left or
@@ -228,7 +275,26 @@ const Cell = struct {
     }
 };
 
-test "Grid" {
+test "Grid Visibility" {
+    var grid = try Grid.init(5, 5, std.testing.allocator);
+    defer grid.deinit();
+
+    const input = [_]i8{
+        3, 0, 3, 7, 3,
+        2, 5, 5, 1, 2,
+        6, 5, 3, 3, 2,
+        3, 3, 5, 4, 9,
+        3, 5, 3, 9, 0,
+    };
+    try grid.fill(&input);
+    try grid.calcNeighborHeights();
+
+    try common.printLn("");
+    const numVisible = grid.numVisible();
+    try expectEqual(@as(usize, 21), numVisible);
+}
+
+test "Grid Scenic Score" {
     var grid = try Grid.init(5, 5, std.testing.allocator);
     defer grid.deinit();
 
@@ -242,11 +308,10 @@ test "Grid" {
     try grid.fill(&input);
 
     try common.printLn("");
-    const numVisible = grid.numVisible();
+    const maxScore = try grid.maxScenicScore();
 
-    try common.printLnFmt("Number of visible cells: {}", .{numVisible});
-
-    try expectEqual(@as(usize, 21), numVisible);
+    try common.printLnFmt("Max scenic score: {}", .{maxScore});
+    try expectEqual(@as(usize, 8), maxScore);
 }
 
 test "Grid Iterators" {
