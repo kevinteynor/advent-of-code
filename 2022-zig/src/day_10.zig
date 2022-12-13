@@ -18,6 +18,9 @@ pub fn run(input: std.fs.File, allocator: Allocator) !void {
     // part 1
     const sig_sum = getSignalSum(instructions.items);
     try common.printLnFmt("Sum of signals: {}", .{sig_sum});
+
+    // part 2
+    try render(instructions.items);
 }
 
 const InstructionCode = enum {
@@ -260,4 +263,200 @@ test "get signals sum" {
 
     var s = getSignalSum(instructions.items);
     try expectEqual(@as(isize, 13140), s);
+}
+
+fn render(instructions: []Instruction) !void {
+    try common.printLn("");
+
+    var sprite_pos: i32 = 1; // +/- 1 in each direction
+    var inst_index: usize = 0;
+    var cycle: u8 = 0;
+
+    var inst_cycles: i8 = 0;
+
+    while (cycle < 240) : (cycle += 1) {
+        if (inst_cycles == 0) {
+            // begin working on new instruction
+            inst_cycles = switch (instructions[inst_index]) {
+                .noop => @as(i8, 1),
+                .addx => @as(i8, 2),
+            };
+        }
+
+        // print current pixel
+        const pixel_pos = cycle % 40;
+        var p_delta: i32 = std.math.absInt(sprite_pos - pixel_pos) catch unreachable;
+        var pixel: u8 = if (p_delta <= @as(i32, 1)) '#' else ' ';
+
+        // move to next row
+        if (pixel_pos == 0) {
+            try common.printLn("");
+        }
+        try common.printFmt("{c}", .{pixel});
+
+        // finish execution of current instruction
+        inst_cycles -= 1;
+        if (inst_cycles == 0) {
+            if (instructions[inst_index] == .addx) {
+                sprite_pos += instructions[inst_index].addx;
+            }
+            inst_index += 1;
+        }
+    }
+    try common.printLn("");
+}
+
+test "Render" {
+    var input = std.io.fixedBufferStream(
+        \\addx 15
+        \\addx -11
+        \\addx 6
+        \\addx -3
+        \\addx 5
+        \\addx -1
+        \\addx -8
+        \\addx 13
+        \\addx 4
+        \\noop
+        \\addx -1
+        \\addx 5
+        \\addx -1
+        \\addx 5
+        \\addx -1
+        \\addx 5
+        \\addx -1
+        \\addx 5
+        \\addx -1
+        \\addx -35
+        \\addx 1
+        \\addx 24
+        \\addx -19
+        \\addx 1
+        \\addx 16
+        \\addx -11
+        \\noop
+        \\noop
+        \\addx 21
+        \\addx -15
+        \\noop
+        \\noop
+        \\addx -3
+        \\addx 9
+        \\addx 1
+        \\addx -3
+        \\addx 8
+        \\addx 1
+        \\addx 5
+        \\noop
+        \\noop
+        \\noop
+        \\noop
+        \\noop
+        \\addx -36
+        \\noop
+        \\addx 1
+        \\addx 7
+        \\noop
+        \\noop
+        \\noop
+        \\addx 2
+        \\addx 6
+        \\noop
+        \\noop
+        \\noop
+        \\noop
+        \\noop
+        \\addx 1
+        \\noop
+        \\noop
+        \\addx 7
+        \\addx 1
+        \\noop
+        \\addx -13
+        \\addx 13
+        \\addx 7
+        \\noop
+        \\addx 1
+        \\addx -33
+        \\noop
+        \\noop
+        \\noop
+        \\addx 2
+        \\noop
+        \\noop
+        \\noop
+        \\addx 8
+        \\noop
+        \\addx -1
+        \\addx 2
+        \\addx 1
+        \\noop
+        \\addx 17
+        \\addx -9
+        \\addx 1
+        \\addx 1
+        \\addx -3
+        \\addx 11
+        \\noop
+        \\noop
+        \\addx 1
+        \\noop
+        \\addx 1
+        \\noop
+        \\noop
+        \\addx -13
+        \\addx -19
+        \\addx 1
+        \\addx 3
+        \\addx 26
+        \\addx -30
+        \\addx 12
+        \\addx -1
+        \\addx 3
+        \\addx 1
+        \\noop
+        \\noop
+        \\noop
+        \\addx -9
+        \\addx 18
+        \\addx 1
+        \\addx 2
+        \\noop
+        \\noop
+        \\addx 9
+        \\noop
+        \\noop
+        \\noop
+        \\addx -1
+        \\addx 2
+        \\addx -37
+        \\addx 1
+        \\addx 3
+        \\noop
+        \\addx 15
+        \\addx -21
+        \\addx 22
+        \\addx -6
+        \\addx 1
+        \\noop
+        \\addx 2
+        \\addx 1
+        \\noop
+        \\addx -10
+        \\noop
+        \\noop
+        \\addx 20
+        \\addx 1
+        \\addx 2
+        \\addx 2
+        \\addx -6
+        \\addx -11
+        \\noop
+        \\noop
+        \\noop
+    );
+    var reader = input.reader();
+    var instructions = try parseInstructions(reader, std.testing.allocator);
+    defer instructions.deinit();
+    try render(instructions.items);
 }
