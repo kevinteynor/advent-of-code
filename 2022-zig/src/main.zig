@@ -11,6 +11,7 @@ const day_07 = @import("day_07.zig");
 const day_08 = @import("day_08.zig");
 const day_09 = @import("day_09.zig");
 const day_10 = @import("day_10.zig");
+const day_11 = @import("day_11.zig");
 
 pub fn main() !void {
     try common.printLn("Advent of Code 2022 - Zig");
@@ -33,6 +34,7 @@ pub fn main() !void {
         8 => try day_08.run(input.inputFile.?, allocator),
         9 => try day_09.run(input.inputFile.?, allocator),
         10 => try day_10.run(input.inputFile.?, allocator),
+        11 => try day_11.run(input.inputFile.?, allocator),
         else => {},
     }
 }
