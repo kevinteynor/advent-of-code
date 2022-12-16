@@ -37,7 +37,7 @@ pub fn printLnFmt(comptime fmt: []const u8, args: anytype) !void {
 pub fn readLine(reader: anytype, buffer: []u8) !?[]u8 {
     var line = try reader.readUntilDelimiterOrEof(buffer, '\n') orelse return null;
     if (builtin.os.tag == .windows and line.len > 0 and line[line.len - 1] == '\r') {
-        line = line[0..line.len - 1];
+        line = line[0 .. line.len - 1];
     }
     return line;
 }
@@ -86,7 +86,7 @@ test "read N lines" {
     const second = try readNLines(2, reader, &buffer) orelse unreachable;
     try expectEqualStrings("three", second[0]);
     try expectEqualStrings("four", second[1]);
-    
+
     const third = try readNLines(2, reader, &buffer);
     try expect(third == null);
 }
@@ -132,8 +132,34 @@ test "read lines until blank" {
     defer second.deinit();
     try expectEqualStrings("four", second.items[0]);
     try expectEqualStrings("five", second.items[1]);
-    
+
     const third = try readLinesUntilBlank(reader, &buffer, std.testing.allocator);
     defer third.deinit();
     try expect(third.items.len == 0);
+}
+
+pub fn contains(comptime T: type, haystack: []const T, needle: T) bool {
+    for (haystack) |item| {
+        if (std.meta.eql(item, needle)) return true;
+    }
+    return false;
+}
+
+test "contains" {
+    try std.testing.expect(contains(i32, &[_]i32{ 1, 2, 3, 4, 5, 6, 7, 8 }, 6));
+    try std.testing.expect(!contains(i32, &[_]i32{ 1, 2, 3, 4, 5, 6, 7, 8 }, 9));
+
+    const Point = struct {
+        x: i32 = 0,
+        y: i32 = 0,
+    };
+
+    const pts = [_]Point{
+        .{ .x = 0, .y = 0 },
+        .{ .x = 0, .y = 1 },
+        .{ .x = 1, .y = 0 },
+        .{ .x = 1, .y = 1 },
+    };
+    try std.testing.expect(contains(Point, &pts, .{ .x = 0, .y = 1 }));
+    try std.testing.expect(!contains(Point, &pts, .{ .x = 2, .y = 1 }));
 }
