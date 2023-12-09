@@ -1,5 +1,5 @@
 {
-  description = "rust aoc dev env"
+  description = "rust aoc dev env";
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fenix = {
@@ -10,17 +10,23 @@
 
   outputs = { self, nixpkgs, fenix, ... }: let
     system = "x86_64-linux";
-    pkgs = import nixpkgs { inherit system; };
+    pkgs = import nixpkgs {
+      inherit system;
+      overlays = [ fenix.overlays.default ];
+    };
   in {
     devShells."${system}" = {
       default = pkgs.mkShell {
-        packages = [ fenix.packages.${system}.default.toolchain ];
+        packages = with pkgs; [
+          fenix.packages.${system}.default.toolchain
+          rust-analyzer-nightly
+        ];
         shellHook = ''
           echo 2023 AOC rust
           rustc --version
           cargo --version
-        ''
+        '';
       };
-    }
-  }
+    };
+  };
 }
